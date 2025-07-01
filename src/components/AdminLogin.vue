@@ -1,7 +1,8 @@
 <template>
   <div class="admin-panel">
     <div class="panel-header">
-      <h2>Balasan Pesan</h2>
+      <h2>Panel Admin</h2>
+      <button @click="handleLogout" class="logout-btn">Keluar</button>
     </div>
 
     <div class="message-list">
@@ -48,14 +49,14 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["reply-sent", "toggle-admin"]);
+const emit = defineEmits(["reply-sent", "logout"]);
 
 const replyTexts = ref({});
 
 const filteredMessages = computed(() => {
-  return [...props.messages].sort(
-    (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
-  );
+  return [...props.messages].sort((a, b) => {
+    return new Date(b.timestamp) - new Date(a.timestamp);
+  });
 });
 
 const formatDate = (dateString) => {
@@ -79,26 +80,44 @@ const sendReply = (messageId) => {
 
   replyTexts.value[messageId] = "";
 };
+
+const handleLogout = () => {
+  emit("logout");
+};
 </script>
 
 <style scoped>
 .admin-panel {
   margin-top: 2rem;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(108, 92, 231, 0.1);
   border-radius: 8px;
   padding: 1.5rem;
   border: 1px solid var(--secondary-color);
 }
 
 .panel-header {
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 1.5rem;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 4px;
 }
 
 .panel-header h2 {
   color: var(--primary-color);
+}
+
+.logout-btn {
+  background-color: var(--danger-color);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background-color: #c0392b;
 }
 
 .message-list {

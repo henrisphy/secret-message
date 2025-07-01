@@ -10,16 +10,36 @@
       <AdminPanel
         v-if="showAdmin"
         :messages="messages"
-        @reply-sent="handleReply"
+        @reply-sent="handleReplyAttempt"
         @toggle-admin="toggleAdmin"
       />
     </main>
 
     <footer>
       <button class="admin-btn" @click="toggleAdmin">
-        {{ showAdmin ? "Sembunyikan Admin" : "Mode Admin" }}
+        {{ showAdmin ? "Sembunyikan Pesan" : "Lihat Semua Pesan" }}
       </button>
     </footer>
+
+    <!-- Password Popup -->
+    <div v-if="showPasswordPopup" class="password-popup-overlay">
+      <div class="password-popup">
+        <h3>Verifikasi Admin</h3>
+        <input
+          type="password"
+          v-model="adminPassword"
+          placeholder="Masukkan password admin"
+          @keyup.enter="verifyPassword"
+        />
+        <div class="popup-buttons">
+          <button @click="verifyPassword" class="confirm-btn">
+            Konfirmasi
+          </button>
+          <button @click="cancelReply" class="cancel-btn">Batal</button>
+        </div>
+        <p v-if="passwordError" class="error-message">{{ passwordError }}</p>
+      </div>
+    </div>
   </div>
 </template>
 
@@ -29,8 +49,16 @@ import MessageForm from "./components/MessageForm.vue";
 import AdminPanel from "./components/AdminPanel.vue";
 import { fetchMessages, saveMessage, saveReply } from "./api/messageApi";
 
+// Data state
 const messages = ref([]);
 const showAdmin = ref(false);
+const showPasswordPopup = ref(false);
+const adminPassword = ref("");
+const passwordError = ref("");
+const pendingReply = ref(null);
+
+// Password admin (ganti dengan password yang Anda inginkan)
+const ADMIN_PASSWORD = "admin123";
 
 // Load messages on mount
 onMounted(async () => {
@@ -42,12 +70,38 @@ const handleNewMessage = async (message) => {
   messages.value.unshift(newMessage);
 };
 
-const handleReply = async ({ messageId, reply }) => {
-  const updatedMessage = await saveReply(messageId, reply);
-  const index = messages.value.findIndex((m) => m.id === messageId);
-  if (index !== -1) {
-    messages.value[index] = updatedMessage;
+const handleReplyAttempt = ({ messageId, reply }) => {
+  pendingReply.value = { messageId, reply };
+  showPasswordPopup.value = true;
+};
+
+const verifyPassword = async () => {
+  if (adminPassword.value === ADMIN_PASSWORD) {
+    // Password benar, kirim balasan
+    const { messageId, reply } = pendingReply.value;
+    const updatedMessage = await saveReply(messageId, reply);
+    const index = messages.value.findIndex((m) => m.id === messageId);
+    if (index !== -1) {
+      messages.value[index] = updatedMessage;
+    }
+    resetPasswordPopup();
+  } else {
+    passwordError.value = "Password salah! Anda tidak bisa mengirim pesan.";
+    setTimeout(() => {
+      passwordError.value = "";
+    }, 3000);
   }
+};
+
+const cancelReply = () => {
+  resetPasswordPopup();
+};
+
+const resetPasswordPopup = () => {
+  showPasswordPopup.value = false;
+  adminPassword.value = "";
+  pendingReply.value = null;
+  passwordError.value = "";
 };
 
 const toggleAdmin = () => {
@@ -126,10 +180,95 @@ footer {
   transform: translateY(-2px);
 }
 
-@keyframes fadeIn {
+/* Password Popup Styles */
+.password-popup-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.password-popup {
+  background-color: white;
+  padding: 2rem;
+  border-radius: 8px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: popupFadeIn 0.3s ease-out;
+}
+
+.password-popup h3 {
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+  text-align: center;
+}
+
+.password-popup input {
+  width: 100%;
+  padding: 0.75rem;
+  margin-bottom: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.password-popup input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+}
+
+.popup-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.popup-buttons button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.confirm-btn {
+  background-color: var(--success-color);
+  color: white;
+}
+
+.confirm-btn:hover {
+  background-color: #00a884;
+}
+
+.cancel-btn {
+  background-color: var(--danger-color);
+  color: white;
+}
+
+.cancel-btn:hover {
+  background-color: #c0392b;
+}
+
+.error-message {
+  color: var(--danger-color);
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 0.9rem;
+}
+
+@keyframes popupFadeIn {
   from {
     opacity: 0;
-    transform: translateY(-20px);
+    transform: translateY(20px);
   }
   to {
     opacity: 1;
